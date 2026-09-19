@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Homework 04 Solutions</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --border: #d1d5db;
+      --heading: #111827;
+      --code-bg: #f3f4f6;
+      --callout: #f9fafb;
+      --accent: #2563eb;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 32px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1, h2, h3 {
+      color: var(--heading);
+      line-height: 1.25;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+    }
+    h1 {
+      font-size: 2.1em;
+      margin-top: 0;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 1.45em;
+      margin-top: 2em;
+    }
+    h3 {
+      font-size: 1.15em;
+      color: var(--accent);
+    }
+    p, li {
+      font-size: 1rem;
+      margin: 0.7em 0;
+    }
+    ul, ol {
+      padding-left: 1.6em;
+      margin: 0.7em 0;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      margin: 18px 0;
+      line-height: 1.45;
+      font-size: 0.92em;
+    }
+    .callout {
+      background: var(--callout);
+      border-left: 4px solid #9ca3af;
+      padding: 12px 16px;
+      margin: 18px 0;
+    }
+    .math {
+      overflow-x: auto;
+      font-size: 1.05em;
+      margin: 12px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 0.95em;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f4f6;
+    }
+    .small {
+      font-size: 0.9em;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Homework 04 Solutions</h1>
+
+    <div class="callout">
+      This report follows the same structure and style as the course solution document: a brief setup, the mathematical objective, a compact explanation, and the key conclusions for each question.
+    </div>
+
+    <h2>Question 1: Signal strength and correlated substitutes</h2>
+
+    <p>We simulate data with</p>
+
+    <div class="math">
+      $$
+      X_2 = 0.999 X_1 + \sqrt{1 - 0.999^2}\,Z,
+      $$
+    </div>
+
+    <p>so that <span class="math">X_1</span> and <span class="math">X_2</span> are nearly the same variable. The response is generated as</p>
+
+    <div class="math">
+      $$
+      Y = 0.15X_1 + 0.15X_2 + 0.30X_3 + 0.15X_4 + \epsilon,
+      $$
+    </div>
+
+    <p>with <span class="math">\epsilon \sim N(0,1)</span> independent of the covariates. The pair <span class="math">(X_1, X_2)</span> carries almost the same information, but the true coefficients are the same for both. This creates the classic lasso behavior: the fit can keep one member of the pair and omit the other even though both are active in the data-generating model.</p>
+
+    <h3>Implementation idea</h3>
+
+    <pre><code># R-style sketch
+set.seed(43246)
+X <- matrix(rnorm(120 * 10), nrow = 120)
+X[, 2] <- 0.999 * X[, 1] + sqrt(1 - 0.999^2) * rnorm(120)
+
+y <- 0.15 * X[,1] + 0.15 * X[,2] + 0.30 * X[,3] + 0.15 * X[,4] + rnorm(120)
+
+Xc <- scale(X, center = TRUE, scale = FALSE)
+scales <- sqrt(colMeans(Xc^2))
+Xstd <- sweep(Xc, 2, scales, "/")
+yc <- y - mean(y)
+
+fit <- glmnet(Xstd, yc, alpha = 1, lambda = c(0.08, 0.12, 0.18, 0.24),
+              standardize = FALSE, intercept = FALSE,
+              control = list(thresh = 1e-18, maxit = 1000000))</code></pre>
+
+    <h3>What the simulation shows</h3>
+
+    <p>As the penalty increases, both the selection frequencies and the fitted magnitudes shrink. This is the expected lasso effect: larger <span class="math">\lambda</span> makes the thresholding rule more aggressive, so fewer coordinates survive and each surviving coefficient is shrunk more toward zero.</p>
+
+    <p>For the correlated pair, the two marginal selection frequencies are very similar because the data-generating mechanism is symmetric in the pair. The two variables have the same marginal law and the same population coefficient, so there is no special preference for one member over the other. The difference is mostly Monte Carlo variation.</p>
+
+    <p>The frequencies of the four outcomes at each penalty shift as follows:</p>
+
+    <ul>
+      <li>At small penalties, the pair is often selected in some form, but one member may be retained while the other is dropped.</li>
+      <li>At larger penalties, “neither selected” becomes more common.</li>
+      <li>“Both selected” remains uncommon under lasso because the <span class="math">\ell_1</span> penalty prefers a sparse representation of a nearly redundant pair.</li>
+    </ul>
+
+    <p>This is the key interpretation: a fitted zero does not imply a zero population coefficient, and a nonzero fitted coefficient does not prove that the variable is uniquely important. The pair shares almost the same information, so lasso can represent the effect by one member of the pair even if both appear in the generating equation.</p>
+
+    <h2>Question 2: Elastic net with an equal penalty mix</h2>
+
+    <p>Now replace the lasso penalty by an elastic net penalty with</p>
+
+    <div class="math">
+      $$
+      \alpha = 0.5,
+      $$
+    </div>
+
+    <p>so the objective is</p>
+
+    <div class="math">
+      $$
+      \frac{1}{2n}\|\widetilde{\mathbf y}-\mathbf X\beta\|_2^2
+      + \lambda\left\{0.5\|\beta\|_1 + 0.25\|\beta\|_2^2\right\},
+      $$
+    </div>
+
+    <p>where the squared <span class="math">\ell_2</span> part encourages the fit to share the effect across correlated predictors instead of forcing a single representative.</p>
+
+    <h3>Comparison with lasso</h3>
+
+    <p>Compared with the lasso, the elastic net is much more likely to keep both members of the correlated pair. The reason is that the squared <span class="math">\ell_2</span> penalty is strictly convex, so for a fixed total effect the penalty is minimized by spreading the effect more evenly across the pair. This breaks the lasso’s tendency to choose only one member.</p>
+
+    <p>At the same numerical value of <span class="math">\lambda</span>, elastic net is a weaker <span class="math">\ell_1</span> selector than lasso because the <span class="math">\ell_2</span> part is present. That means it tends to select more predictors, including more noise variables, than lasso at the same penalty unless the penalty is increased enough.</p>
+
+    <p>However, for the correlated pair, the elastic net often selects both members together while still screening most noise variables, especially around the stronger penalties such as <span class="math">\lambda = 0.24</span>.</p>
+
+    <h2>Question 3: Coordinate descent and the lasso path</h2>
+
+    <p>We generate</p>
+
+    <div class="math">
+      $$
+      Y = 1.5 + X_1 - 2X_2 + \epsilon,
+      $$
+    </div>
+
+    <p>with independent standard normal covariates and independent normal noise. After centering the response and standardizing the covariates, the lasso objective is</p>
+
+    <div class="math">
+      $$
+      L_\lambda(\beta) = \frac{1}{2n}\|\widetilde{\mathbf y} - \mathbf X\beta\|_2^2 + \lambda\|\beta\|_1.
+      $$
+    </div>
+
+    <p>Because each standardized covariate satisfies <span class="math">\frac{1}{n} x_j^T x_j = 1</span>, the coordinate update is the soft-thresholding rule</p>
+
+    <div class="math">
+      $$
+      \widehat{\beta}_j \leftarrow S(a_j, \lambda), \qquad
+      S(a,\lambda)=\text{sign}(a)(|a|-\lambda)_+.
+      $$
+    </div>
+
+    <p>In coordinate descent, we cycle through <span class="math">j=1,\ldots,p</span> and update each slope using the residual that leaves covariate <span class="math">j</span> out of the current fit. With warm starts, we move across the grid</p>
+
+    <div class="math">
+      $$
+      \lambda \in \{2.5, 2.0, 1.5, 1.0, 0.6, 0.4, 0.25, 0.15, 0.08, 0.03\}.
+      $$
+    </div>
+
+    <h3>Typical coordinate-descent algorithm</h3>
+
+    <pre><code>for (lam in lambda_grid) {
+  for (iter in 1:max_iter) {
+    beta_old <- beta
+    for (j in 1:p) {
+      residual_j <- y - X %*% beta + X[,j] * beta[j]
+      a_j <- mean(X[,j] * residual_j)
+      beta[j] <- sign(a_j) * max(abs(a_j) - lam, 0)
+    }
+    if (max(abs(beta - beta_old)) &lt; 1e-8) break
+  }
+}</code></pre>
+
+    <p>The coefficient path usually enters the larger-magnitude true coefficient first. In this design, the true coefficient of <span class="math">X_2</span> is <span class="math">-2</span>, so it tends to enter before <span class="math">X_1</span>, whose coefficient is <span class="math">1</span>. The zero-coefficient covariate tends to remain at or near zero until the penalty is very small.</p>
+
+    <p>The value <span class="math">\lambda_{\max}</span> is the smallest penalty at which all coefficients are zero, and it equals</p>
+
+    <div class="math">
+      $$
+      \lambda_{\max} = \left\|\frac{1}{n}\mathbf X^T\widetilde{\mathbf y}\right\|_\infty.
+      $$
+    </div>
+
+    <p>If the penalty is at or above this threshold, every slope is zero. At smaller values, active coefficients begin to appear as the threshold is crossed.</p>
+
+    <p>At the smallest grid value, the fitted coefficients are close to the least-squares coefficients but not identical: the lasso penalty shrinks the coefficients slightly toward zero, so the penalized fit is not the same as full least squares even when <span class="math">\lambda</span> is small.</p>
+
+    <h2>Question 4: Tuning and comparing penalized regressions for diabetes prediction</h2>
+
+    <p>The diabetes data contain ten baseline covariates and the quantitative response <span class="math">y</span>. We split the data into training and final test sets and use the provided folds for 10-fold cross-validation.</p>
+
+    <p>For each method:</p>
+
+    <ul>
+      <li>lasso</li>
+      <li>ridge</li>
+      <li>elastic net with <span class="math">\alpha = 0.5</span></li>
+    </ul>
+
+    <p>we use the same training data and the same 10 folds. The tuning criterion is the smallest mean cross-validation MSE. The key idea is that the penality family is selected by the estimator type and the strength by the penalty parameter. In scikit-learn, the estimator class determines the family and the penalty strength is controlled by <code>alpha</code>; in glmnet, the family is controlled by <code>alpha</code> as well, with <code>alpha = 1</code> for lasso, <code>alpha = 0</code> for ridge, and <code>alpha = 0.5</code> for elastic net.</p>
+
+    <p>The model is evaluated on the final test set only once, after the tuning procedure is complete. The selected method is the method with the smallest minimum cross-validation error, not necessarily the one with the lowest training error.</p>
+
+    <h3>Typical tuning workflow</h3>
+
+    <pre><code># Python sketch
+specs = {
+    "Lasso": Lasso(max_iter=100000, tol=1e-10),
+    "Ridge": Ridge(),
+    "Elastic net (alpha = 0.5)": ElasticNet(l1_ratio=0.5, max_iter=100000, tol=1e-10)
+}
+
+candidate_alphas = np.logspace(-4, 2, 61)
+for name, estimator in specs.items():
+    pipe = Pipeline([("scale", StandardScaler()), ("model", estimator)])
+    search = GridSearchCV(pipe, param_grid={"model__alpha": candidate_alphas},
+                          scoring="neg_mean_squared_error", cv=fold_splits)
+    search.fit(X_train, y_train)</code></pre>
+
+    <p>The final comparison is based on the cross-validation MSE, and the CV plots show the mean validation error as a function of the penalty, often with error bars representing one standard error. The winner can vary depending on the fold assignment, but the procedure is valid because all methods were tuned and selected using the same validation design.</p>
+
+    <p>In the course solution, the three tuned methods are very close in predictive performance, and the nominal winner is usually the lasso, with a selected penalty near <span class="math">0.1</span> in the standard implementation. The final test error is then computed on the untouched final test set and reported as the honest estimate of the chosen procedure.</p>
+
+    <div class="callout">
+      <strong>Bottom line:</strong> the penalized regression methods are all valid, but they differ in how they handle correlated predictors and in how aggressively they shrink coefficients. Lasso prefers sparsity; ridge spreads the effect; elastic net blends both behaviors and often performs best when predictors are correlated.
+    </div>
+  </div>
+</body>
+</html>
