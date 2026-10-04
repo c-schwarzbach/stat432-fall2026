@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="STAT 432 Homework 06 Python solutions" />
+    <title>STAT 432 · Homework 06 Solutions</title>
+    <style>
+      :root {
+        --page-bg: #ffffff;
+        --text: #222;
+        --muted: #606b77;
+        --border: #dfe3e8;
+        --panel: #f8f9fb;
+        --accent: #2b6cb0;
+        --code-bg: #f5f5f5;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.6;
+        color: var(--text);
+        background: var(--page-bg);
+      }
+      a { color: var(--accent); }
+      a:hover { text-decoration: underline; }
+
+      .top {
+        background: #fafafa;
+        border-bottom: 1px solid var(--border);
+      }
+      .hero, .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding-left: 32px;
+        padding-right: 32px;
+      }
+      .hero {
+        padding-top: 32px;
+        padding-bottom: 22px;
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      h1, h2, h3 {
+        color: var(--text);
+        line-height: 1.25;
+      }
+      h1 {
+        margin: 4px 0 8px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid var(--border);
+        font-size: 2.1em;
+      }
+      h2 {
+        margin: 0.2em 0 0.7em;
+        padding-bottom: 5px;
+        border-bottom: 1px solid var(--border);
+        font-size: 1.45em;
+      }
+      h3 {
+        margin-top: 1.5em;
+        font-size: 1.15em;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 1.05em;
+      }
+
+      .container {
+        padding-top: 26px;
+        padding-bottom: 32px;
+      }
+      .toc {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 14px 18px;
+        margin-bottom: 28px;
+      }
+      .toc strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+      .toc a {
+        display: inline-block;
+        margin-right: 18px;
+        text-decoration: none;
+      }
+
+      .question {
+        margin-bottom: 38px;
+        scroll-margin-top: 16px;
+      }
+      .qnum {
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .callout, .answer, .takeaway {
+        background: var(--panel);
+        padding: 12px 16px;
+        margin: 18px 0;
+      }
+      .callout {
+        border-left: 4px solid #9aa5b1;
+      }
+      .answer {
+        border-left: 4px solid #777;
+      }
+      .takeaway {
+        border-left: 4px solid #555;
+      }
+
+      p, li {
+        font-size: 1rem;
+      }
+      ul, ol {
+        padding-left: 1.3rem;
+      }
+      code {
+        font-family: Consolas, "Courier New", monospace;
+        background: #f3f5f7;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        line-height: 1.45;
+        font-size: 0.9em;
+      }
+      pre code {
+        display: block;
+        background: transparent;
+        padding: 0;
+      }
+      .math {
+        font-style: italic;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 18px 0;
+        font-size: 0.95em;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: 8px 10px;
+        text-align: left;
+      }
+      th {
+        background: #f3f3f3;
+      }
+
+      footer {
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        padding: 18px 32px 28px;
+        text-align: center;
+      }
+
+      @media (max-width: 700px) {
+        .hero, .container {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+        .toc a {
+          display: block;
+          margin: 6px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <header class="hero">
+        <div class="eyebrow">STAT 432 · Homework 06</div>
+        <h1>Homework 06 Solutions</h1>
+        <div class="subtitle">Python solutions using KNN, ROC curves, and model comparison</div>
+      </header>
+    </div>
+
+    <div class="container">
+      <nav class="toc" aria-label="Solutions sections">
+        <strong>On this page</strong>
+        <a href="#setup">Shared setup</a>
+        <a href="#q1">Question 1</a>
+        <a href="#q2">Question 2</a>
+      </nav>
+
+      <main>
+        <section class="question" id="setup">
+          <div class="qnum">Shared setup</div>
+          <h2>Python imports and data setup</h2>
+          <div class="callout">
+            The code below follows the Python solution in the Homework 6 Quarto document. It uses the same split recorded in <code>breast-cancer-split.csv</code>, so that the results line up with the course solution.
+          </div>
+
+          <pre><code>from pathlib import Path
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import roc_curve, roc_auc_score
+
+data_dir = Path("data")
+if not (data_dir / "breast-cancer.csv").exists():
+    data_dir = Path("practice/weeks/week-06/data")
+data = pd.read_csv(data_dir / "breast-cancer.csv")
+# Use the split generated with seed 432 in the R solution.
+split = pd.read_csv(data_dir / "breast-cancer-split.csv")
+train = data.loc[split["split"].eq("train")]
+test = data.loc[split["split"].eq("test")]
+predictors = ["mean_radius", "mean_texture", "mean_smoothness"]
+
+x_bar = train[predictors].mean()
+s = train[predictors].std(ddof=1)
+X_train = ((train[predictors] - x_bar) / s).to_numpy()
+X_test = ((test[predictors] - x_bar) / s).to_numpy()
+y_train = train["y"].to_numpy()
+y_test = test["y"].to_numpy()</code></pre>
+        </section>
+
+        <section class="question" id="q1">
+          <div class="qnum">Question 1</div>
+          <h2>Compare KNN and logistic regression</h2>
+
+          <p>We compare the models using their estimated probabilities of malignancy, not class predictions at a single cutoff. For KNN, this probability is the proportion of malignant cases among the <span class="math">k</span> nearest training observations.</p>
+
+          <p>Fit ordinary logistic regression and the five KNN models. Logistic regression uses an intercept and no penalty, while KNN uses uniform neighbor weights and Euclidean distance.</p>
+
+          <pre><code>fit = LogisticRegression(C=np.inf, solver="lbfgs", fit_intercept=True,
+                         tol=1e-10, max_iter=1000)
+fit.fit(X_train, y_train)
+k_values = [5, 15, 25, 35, 45]
+model_names = ["Logistic regression"] + [f"KNN, k = {k}" for k in k_values]
+p_test = np.empty((len(y_test), len(model_names)))
+p_test[:, 0] = fit.predict_proba(X_test)[:, 1]
+for m, k in enumerate(k_values):
+    knn_fit = KNeighborsClassifier(n_neighbors=k, weights="uniform",
+                                   metric="euclidean", algorithm="brute")
+    knn_fit.fit(X_train, y_train)
+    p_test[:, m + 1] = knn_fit.predict_proba(X_test)[:, 1]
+
+auc_test = [roc_auc_score(y_test, p_test[:, m])
+            for m in range(len(model_names))]
+print(pd.DataFrame({"Model": model_names, "Test AUC": auc_test})
+      .round(4).to_string(index=False))</code></pre>
+
+          <p>A representative result for the supplied split is:</p>
+
+          <table>
+            <thead>
+              <tr><th>Model</th><th>Test AUC</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Logistic regression</td><td>0.9746</td></tr>
+              <tr><td>KNN, k = 5</td><td>0.9329</td></tr>
+              <tr><td>KNN, k = 15</td><td>0.9480</td></tr>
+              <tr><td>KNN, k = 25</td><td>0.9599</td></tr>
+              <tr><td>KNN, k = 35</td><td>0.9727</td></tr>
+              <tr><td>KNN, k = 45</td><td>0.9741</td></tr>
+            </tbody>
+          </table>
+
+          <p>For this split, logistic regression is preferred because its test AUC is the highest and it gives a simple, interpretable model. The larger KNN neighborhoods are close, but the best alternative is still slightly below the logistic model.</p>
+
+          <pre><code>colors = ["#222222", "#0072B2", "#D55E00", "#009E73", "#CC79A7", "#806000"]
+line_styles = ["-", "--", ":", "-.", (0, (5, 2, 1, 2)), (0, (3, 2, 1, 2, 1, 2))]
+fig, ax = plt.subplots(figsize=(6.5, 6))
+ax.plot([0, 1], [0, 1], color="0.7", linestyle="--")
+for m, name in enumerate(model_names):
+    fpr, tpr, _ = roc_curve(y_test, p_test[:, m])
+    ax.plot(fpr, tpr, color=colors[m], linestyle=line_styles[m], linewidth=2,
+            label=f"{name}: AUC = {auc_test[m]:.4f}")
+ax.set(xlim=(0, 1), ylim=(0, 1),
+       xlabel="False-positive rate", ylabel="True-positive rate")
+ax.legend(loc="lower right", frameon=False, fontsize=9)
+fig.tight_layout()
+plt.show()</code></pre>
+
+          <div class="answer">
+            <strong>Interpretation:</strong> The ROC curves show how each model ranks malignant versus benign cases on the test set. A larger AUC indicates better discrimination. In this split, the logistic regression model gives the strongest ranking, while KNN behaves best near the larger neighborhood sizes.
+          </div>
+        </section>
+
+        <section class="question" id="q2">
+          <div class="qnum">Question 2</div>
+          <h2>Training and test ROC curves</h2>
+
+          <p>Use the same data split and standardization as in Question 1. For each value of <span class="math">k</span>, fit KNN on the training data and compute probabilities for both the training and the test observations.</p>
+
+          <pre><code>k_values = [1, 3, 5, 10, 20]
+p_train = np.empty((len(y_train), len(k_values)))
+p_test = np.empty((len(y_test), len(k_values)))
+auc_train = np.empty(len(k_values))
+auc_test = np.empty(len(k_values))
+for m, k in enumerate(k_values):
+    knn_fit = KNeighborsClassifier(n_neighbors=k, weights="uniform",
+                                   metric="euclidean", algorithm="brute")
+    knn_fit.fit(X_train, y_train)
+    # Passing X_train explicitly includes each observation itself.
+    p_train[:, m] = knn_fit.predict_proba(X_train)[:, 1]
+    p_test[:, m] = knn_fit.predict_proba(X_test)[:, 1]
+    auc_train[m] = roc_auc_score(y_train, p_train[:, m])
+    auc_test[m] = roc_auc_score(y_test, p_test[:, m])
+print(pd.DataFrame({"k": k_values, "Training AUC": auc_train,
+                    "Test AUC": auc_test}).round(4).to_string(index=False))</code></pre>
+
+          <table>
+            <thead>
+              <tr><th>k</th><th>Training AUC</th><th>Test AUC</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>1.0000</td><td>0.8764</td></tr>
+              <tr><td>3</td><td>0.9880</td><td>0.9138</td></tr>
+              <tr><td>5</td><td>0.9847</td><td>0.9329</td></tr>
+              <tr><td>10</td><td>0.9862</td><td>0.9446</td></tr>
+              <tr><td>20</td><td>0.9880</td><td>0.9586</td></tr>
+            </tbody>
+          </table>
+
+          <p>The key pattern is that training AUC is much more optimistic than test AUC, especially when <span class="math">k</span> is small. At <span class="math">k = 1</span>, each training observation is its own nearest neighbor, so the fitted probability is exactly its observed response: 0 or 1. This makes the training AUC equal to 1.0000, but it does not mean that the model will predict well on new observations, because the test data were not used to fit the model.</p>
+
+          <div class="takeaway">
+            <strong>Why the training/test gap matters:</strong> Training performance is optimistic because the same observations are used both to fit and to evaluate the model. As <span class="math">k</span> increases, the fitted probabilities are smoothed and become less variable, which typically reduces this optimism and improves test performance up to a point.
+          </div>
+
+          <pre><code>fig, axes = plt.subplots(2, 3, figsize=(10, 7))
+for m, k in enumerate(k_values):
+    ax = axes.flat[m]
+    fpr, tpr, _ = roc_curve(y_train, p_train[:, m])
+    ax.plot(fpr, tpr, color="#0072B2", linewidth=2,
+            label=f"Training AUC = {auc_train[m]:.4f}")
+    fpr, tpr, _ = roc_curve(y_test, p_test[:, m])
+    ax.plot(fpr, tpr, color="#D55E00", linestyle="--", linewidth=2,
+            label=f"Test AUC = {auc_test[m]:.4f}")
+    ax.plot([0, 1], [0, 1], color="0.7", linestyle=":")
+    ax.set(title=f"k = {k}", xlim=(0, 1), ylim=(0, 1),
+           xlabel="False-positive rate", ylabel="True-positive rate")
+    ax.legend(loc="lower right", frameon=False, fontsize=8)
+axes.flat[-1].set_visible(False)
+fig.tight_layout()
+plt.show()</code></pre>
+
+          <p>The training ROC curve for <span class="math">k = 1</span> is almost perfect because each observation is ranked against itself. The test curve is lower because it evaluates the model on cases that were not seen during fitting. A larger neighborhood generally reduces this gap, but if <span class="math">k</span> gets too large, the model may become too smooth and lose local structure.</p>
+        </section>
+
+      </main>
+    </div>
+
+    <footer>
+      STAT 432 · Homework 06 Solutions
+    </footer>
+  </body>
+</html>
