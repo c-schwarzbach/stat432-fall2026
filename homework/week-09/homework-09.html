@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAT 432 — Homework 09</title>
+<style>
+:root{--ink:#202938;--muted:#596579;--line:#d8dee8;--accent:#244a73;--pale:#f3f6fa}*{box-sizing:border-box}body{margin:0;background:#edf1f6;color:var(--ink);font:16px/1.55 Arial,Helvetica,sans-serif}main{max-width:1050px;margin:28px auto;padding:34px;background:white;box-shadow:0 4px 22px #18243518}h1,h2,h3{line-height:1.2;color:#173652}h1{margin-top:0}h2{border-bottom:2px solid var(--line);padding-bottom:8px;margin-top:36px}p,li{max-width:90ch}.note{background:var(--pale);border-left:4px solid var(--accent);padding:12px 16px}table{border-collapse:collapse;width:100%;font-size:14px;margin:16px 0}th,td{padding:8px 10px;border:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--pale)}code{white-space:normal}figure{margin:16px 0;overflow-x:auto}svg{min-width:760px;width:100%;height:auto}.report{border:1px solid var(--line);padding:22px;max-width:8.5in;margin:20px auto;font-size:11pt;line-height:1.35}.report h3{margin:0 0 8px}.small{color:var(--muted);font-size:13px}@media print{body{background:white}main{box-shadow:none;margin:0;max-width:none;padding:0}.no-print{display:none}.report{break-inside:avoid}}
+@media print{body{background:white}main{box-shadow:none;margin:0;max-width:none;padding:0}.skill-source{font-size:9pt!important}}</style>
+</head>
+<body>
+<main>
+<h1>STAT 432 — Homework 09</h1>
+<p class="small">SVM kernel tuning and reusable SVM analysis skill</p>
+<div class="note">
+<strong>Scope note for Question 2:</strong> The appended <code>SKILL.md</code> is the student's handwritten skill. The analysis report below records its explicit application to the SAheart data.</div>
+<h2>Question 1: Choosing an SVM kernel</h2>
+<h3>Data and method</h3>
+<p>The dataset contains 462 observations and nine predictors: <code>sbp</code>, <code>tobacco</code>, <code>ldl</code>, <code>adiposity</code>, <code>famhist</code>, <code>typea</code>, <code>obesity</code>, <code>alcohol</code>, and <code>age</code>. The response is <code>chd</code>. I recoded <code>famhist</code> as 1 for Absent and 2 for Present. The response is binary, and the classes are somewhat imbalanced (302 class-0 and 160 class-1 observations), so stratified folds were used.</p>
+<p>I created five stratified folds using shuffle=True and random_state=432, and reused the exact same folds for all candidates. In every fold, a standard scaler was fitted only on the training portion, then applied to that fold's held-out portion. The SVM was fitted on the scaled training data. Misclassification rate is the proportion of incorrect predictions; the reported value is the unweighted mean of the five fold-specific rates.</p>
+<p>I compared 18 candidates: three linear settings; nine polynomial settings (degrees 2, 3, and 4, each with C=0.1, 1, and 10); and six RBF settings. For polynomial kernels, gamma was held at <code>scale</code> and coef0 at 0. For the RBF kernel, gamma and C were varied as shown. All models used the SVC default decision rule and no class weights.</p>
+<h3>Candidate settings and cross-validation results</h3>
+<table>
+<thead>
+<tr>
+<th>Kernel</th>
+<th>Settings</th>
+<th>Mean CV misclassification rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linear</td>
+<td>
+<code>C=0.1</code>
+</td>
+<td>0.2706 (27.06%)</td>
+</tr>
+<tr>
+<td>Linear</td>
+<td>
+<code>C=1</code>
+</td>
+<td>0.2707 (27.07%)</td>
+</tr>
+<tr>
+<td>Linear</td>
+<td>
+<code>C=10</code>
+</td>
+<td>0.2750 (27.50%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 2)</td>
+<td>
+<code>C=0.1; degree=2; gamma=scale; coef0=0</code>
+</td>
+<td>0.3421 (34.21%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 2)</td>
+<td>
+<code>C=1; degree=2; gamma=scale; coef0=0</code>
+</td>
+<td>0.3355 (33.55%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 2)</td>
+<td>
+<code>C=10; degree=2; gamma=scale; coef0=0</code>
+</td>
+<td>0.3116 (31.16%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 3)</td>
+<td>
+<code>C=0.1; degree=3; gamma=scale; coef0=0</code>
+</td>
+<td>0.3399 (33.99%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 3)</td>
+<td>
+<code>C=1; degree=3; gamma=scale; coef0=0</code>
+</td>
+<td>0.2943 (29.43%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 3)</td>
+<td>
+<code>C=10; degree=3; gamma=scale; coef0=0</code>
+</td>
+<td>0.3072 (30.72%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 4)</td>
+<td>
+<code>C=0.1; degree=4; gamma=scale; coef0=0</code>
+</td>
+<td>0.3291 (32.91%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 4)</td>
+<td>
+<code>C=1; degree=4; gamma=scale; coef0=0</code>
+</td>
+<td>0.3291 (32.91%)</td>
+</tr>
+<tr>
+<td>Polynomial (degree 4)</td>
+<td>
+<code>C=10; degree=4; gamma=scale; coef0=0</code>
+</td>
+<td>0.3289 (32.89%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=0.1; gamma=0.01</code>
+</td>
+<td>0.3463 (34.63%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=1; gamma=0.01</code>
+</td>
+<td>0.2728 (27.28%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=1; gamma=0.1</code>
+</td>
+<td>0.2901 (29.01%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=10; gamma=0.01</code>
+</td>
+<td>0.2684 (26.84%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=10; gamma=0.1</code>
+</td>
+<td>0.3094 (30.94%)</td>
+</tr>
+<tr>
+<td>RBF</td>
+<td>
+<code>C=100; gamma=0.01</code>
+</td>
+<td>0.2879 (28.79%)</td>
+</tr>
+</tbody>
+</table>
+<h3>Visual comparison</h3>
+<figure>
+<svg viewBox="0 0 900 520" role="img" aria-label="Mean cross-validation error by SVM candidate">
+<line x1="245" y1="20" x2="245" y2="470" stroke="#555"/>
+<line x1="245.0" y1="20" x2="245.0" y2="470" stroke="#ddd"/>
+<text x="245.0" y="488" font-size="12" text-anchor="middle">0%</text>
+<line x1="388.75" y1="20" x2="388.75" y2="470" stroke="#ddd"/>
+<text x="388.75" y="488" font-size="12" text-anchor="middle">10%</text>
+<line x1="532.5" y1="20" x2="532.5" y2="470" stroke="#ddd"/>
+<text x="532.5" y="488" font-size="12" text-anchor="middle">20%</text>
+<line x1="676.25" y1="20" x2="676.25" y2="470" stroke="#ddd"/>
+<text x="676.25" y="488" font-size="12" text-anchor="middle">30%</text>
+<line x1="820.0" y1="20" x2="820.0" y2="470" stroke="#ddd"/>
+<text x="820.0" y="488" font-size="12" text-anchor="middle">40%</text>
+<text x="237" y="37" font-size="11" text-anchor="end">RBF | C=10; gamma=0.01</text>
+<rect x="245" y="23" width="385.8534946236559" height="17" fill="#276749"/>
+<text x="634.8534946236559" y="36" font-size="10">0.268</text>
+<text x="237" y="62" font-size="11" text-anchor="end">Linear | C=0.1</text>
+<rect x="245" y="48" width="389.04569892473114" height="17" fill="#6b8eae"/>
+<text x="638.0456989247311" y="61" font-size="10">0.271</text>
+<text x="237" y="87" font-size="11" text-anchor="end">Linear | C=1</text>
+<rect x="245" y="73" width="389.11290322580635" height="17" fill="#6b8eae"/>
+<text x="638.1129032258063" y="86" font-size="10">0.271</text>
+<text x="237" y="112" font-size="11" text-anchor="end">RBF | C=1; gamma=0.01</text>
+<rect x="245" y="98" width="392.2043010752687" height="17" fill="#6b8eae"/>
+<text x="641.2043010752686" y="111" font-size="10">0.273</text>
+<text x="237" y="137" font-size="11" text-anchor="end">Linear | C=10</text>
+<rect x="245" y="123" width="395.32930107526886" height="17" fill="#6b8eae"/>
+<text x="644.3293010752689" y="136" font-size="10">0.275</text>
+<text x="237" y="162" font-size="11" text-anchor="end">RBF | C=100; gamma=0.01</text>
+<rect x="245" y="148" width="413.8104838709677" height="17" fill="#6b8eae"/>
+<text x="662.8104838709677" y="161" font-size="10">0.288</text>
+<text x="237" y="187" font-size="11" text-anchor="end">RBF | C=1; gamma=0.1</text>
+<rect x="245" y="173" width="417.0026881720429" height="17" fill="#6b8eae"/>
+<text x="666.0026881720429" y="186" font-size="10">0.290</text>
+<text x="237" y="212" font-size="11" text-anchor="end">Polynomial (degree 3) | C=1; degree=3;</text>
+<rect x="245" y="198" width="423.0846774193548" height="17" fill="#6b8eae"/>
+<text x="672.0846774193549" y="211" font-size="10">0.294</text>
+<text x="237" y="237" font-size="11" text-anchor="end">Polynomial (degree 3) | C=10; degree=3</text>
+<rect x="245" y="223" width="441.66666666666663" height="17" fill="#6b8eae"/>
+<text x="690.6666666666666" y="236" font-size="10">0.307</text>
+<text x="237" y="262" font-size="11" text-anchor="end">RBF | C=10; gamma=0.1</text>
+<rect x="245" y="248" width="444.69086021505365" height="17" fill="#6b8eae"/>
+<text x="693.6908602150536" y="261" font-size="10">0.309</text>
+<text x="237" y="287" font-size="11" text-anchor="end">Polynomial (degree 2) | C=10; degree=2</text>
+<rect x="245" y="273" width="447.91666666666663" height="17" fill="#6b8eae"/>
+<text x="696.9166666666666" y="286" font-size="10">0.312</text>
+<text x="237" y="312" font-size="11" text-anchor="end">Polynomial (degree 4) | C=10; degree=4</text>
+<rect x="245" y="298" width="472.8494623655913" height="17" fill="#6b8eae"/>
+<text x="721.8494623655913" y="311" font-size="10">0.329</text>
+<text x="237" y="337" font-size="11" text-anchor="end">Polynomial (degree 4) | C=0.1; degree=</text>
+<rect x="245" y="323" width="473.0510752688172" height="17" fill="#6b8eae"/>
+<text x="722.0510752688172" y="336" font-size="10">0.329</text>
+<text x="237" y="362" font-size="11" text-anchor="end">Polynomial (degree 4) | C=1; degree=4;</text>
+<rect x="245" y="348" width="473.0510752688172" height="17" fill="#6b8eae"/>
+<text x="722.0510752688172" y="361" font-size="10">0.329</text>
+<text x="237" y="387" font-size="11" text-anchor="end">Polynomial (degree 2) | C=1; degree=2;</text>
+<rect x="245" y="373" width="482.32526881720423" height="17" fill="#6b8eae"/>
+<text x="731.3252688172042" y="386" font-size="10">0.336</text>
+<text x="237" y="412" font-size="11" text-anchor="end">Polynomial (degree 3) | C=0.1; degree=</text>
+<rect x="245" y="398" width="488.6760752688172" height="17" fill="#6b8eae"/>
+<text x="737.6760752688172" y="411" font-size="10">0.340</text>
+<text x="237" y="437" font-size="11" text-anchor="end">Polynomial (degree 2) | C=0.1; degree=</text>
+<rect x="245" y="423" width="491.7002688172043" height="17" fill="#6b8eae"/>
+<text x="740.7002688172042" y="436" font-size="10">0.342</text>
+<text x="237" y="462" font-size="11" text-anchor="end">RBF | C=0.1; gamma=0.01</text>
+<rect x="245" y="448" width="497.8494623655914" height="17" fill="#6b8eae"/>
+<text x="746.8494623655914" y="461" font-size="10">0.346</text>
+<text x="532.5" y="515" font-size="12" text-anchor="middle">Mean 5-fold misclassification rate</text>
+</svg>
+<figcaption class="small">Candidates sorted from lowest to highest mean cross-validation error. Lower is better.</figcaption>
+</figure>
+<h3>Preferred model</h3>
+<p>I prefer the <strong>RBF kernel with C=10 and gamma=0.01</strong>, which had the lowest mean cross-validation misclassification rate, <strong>0.2684 (26.84%)</strong>. The linear models were close (about 27.1%), so the apparent improvement is modest rather than decisive. The polynomial candidates generally performed worse. Given the small difference from the linear kernel, I would treat the RBF choice as the best candidate within this grid, not proof that it is substantially superior. A larger or repeated nested cross-validation study could assess the stability of this choice.</p>
+<h2>Question 2: SVM analysis skill</h2>
+<style>@media print{.report{font-size:11pt;line-height:1.18;padding:14px;margin:10px auto}.report p{margin:5px 0}.report table{margin:6px 0}.report figure{margin:6px 0}.report .small{font-size:9pt}}</style>
+<h3>Compact analysis report (for the skill application)</h3>
+<p class="small"><strong>Explicit invocation.</strong> I asked the agent to use <code>C:/Users/camsc/OneDrive/Desktop/.agents/stat432-fall2026-student/homework/week-09/SKILL.md</code> while analyzing <code>saheart.csv</code>, with <code>chd</code> as the response, the nine specified predictors, and <code>famhist</code> coded Absent=1 and Present=2.</p>
+<section class="report">
+<h3>SVM analysis of the SAheart data</h3>
+<p>
+<strong>Goal and data.</strong> Predict coronary heart disease status (<code>chd</code>) from nine predictors in 462 observations. Family history was coded Absent=1 and Present=2. The response has 302 zeros and 160 ones. SVM is appropriate for this binary classification task with mixed-scale numeric predictors; standardization is important. Check for missing values, data leakage, and any dependence among observations before fitting.</p>
+<p>
+<strong>Model selection.</strong> A fixed, stratified five-fold split (shuffle, seed 432) was reused for 18 candidates: linear, polynomial degrees 2–4, and RBF kernels. C was varied across 0.1, 1, and 10 for linear and polynomial models. For polynomial kernels, gamma=scale and coef0=0 were held fixed. Six RBF combinations varied C and gamma. Scaling was fitted inside each training fold only. The selection metric was mean fold misclassification rate.</p>
+<p>
+<strong>Result.</strong> RBF with C=10 and gamma=0.01 ranked first, with mean CV error 0.2684 (26.84%). Linear SVM was close: C=0.1 gave 0.2706 and C=1 gave 0.2707. Polynomial kernels were worse in this candidate grid (best degree-3 candidate: 0.2943). Therefore the RBF model is the preferred candidate, but the small gap versus linear SVM limits confidence that the gain is meaningful.</p>
+<table style="font-size:10px;margin:8px 0"><thead><tr><th>Kernel</th><th>Best settings</th><th>CV error (SE)</th><th>Train error</th><th>Support vectors</th></tr></thead><tbody><tr><td>Linear</td><td><code>C=0.1</code></td><td>0.2706 (0.0096)</td><td>0.2597</td><td>283 (61.3%)</td></tr><tr><td>Polynomial</td><td><code>C=1; degree=3</code></td><td>0.2943 (0.0140)</td><td>0.2078</td><td>280 (60.6%)</td></tr><tr><td>RBF</td><td><code>C=10; gamma=0.01</code></td><td><strong>0.2684 (0.0088)</strong></td><td>0.2316</td><td>280 (60.6%)</td></tr></tbody></table>
+<figure style="margin:8px 0"><svg style="min-width:0;width:100%" viewBox="0 0 620 125" role="img" aria-label="Cross-validation error with one standard error for the best model from each kernel"><line x1="145" y1="12" x2="145" y2="101" stroke="#555"/><line x1="145" y1="101" x2="590" y2="101" stroke="#555"/><text x="145" y="119" font-size="10" text-anchor="middle">0.20</text><text x="368" y="119" font-size="10" text-anchor="middle">0.25</text><text x="590" y="119" font-size="10" text-anchor="middle">0.30</text><text x="137" y="31" font-size="10" text-anchor="end">Linear</text><text x="137" y="61" font-size="10" text-anchor="end">Polynomial</text><text x="137" y="91" font-size="10" text-anchor="end">RBF</text><rect x="145" y="20" width="315" height="12" fill="#6b8eae"/><line x1="417" y1="26" x2="502" y2="26" stroke="#173652" stroke-width="2"/><rect x="145" y="50" width="420" height="12" fill="#6b8eae"/><line x1="502" y1="56" x2="628" y2="56" stroke="#173652" stroke-width="2"/><rect x="145" y="80" width="304" height="12" fill="#276749"/><line x1="410" y1="86" x2="488" y2="86" stroke="#173652" stroke-width="2"/><text x="466" y="30" font-size="9">0.271</text><text x="571" y="60" font-size="9">0.294</text><text x="455" y="90" font-size="9">0.268</text></svg><figcaption class="small">Best candidate per kernel; bars show mean CV error and whiskers show ±1 SE. Lower is better.</figcaption></figure>
+<p>
+<strong>Interpretation and caveat.</strong> The best model's cross-validated accuracy is approximately 73.2%, only modestly above the majority-class baseline of 65.4%. On the full standardized data, the RBF model had 280 support vectors (60.6% of observations), indicating a flexible boundary with many observations defining the margin. Its training error (23.2%) was below its CV error (26.8%), suggesting some optimism but not a dramatic train-CV gap. Here, larger <code>C</code> penalizes training errors more strongly, while larger <code>gamma</code> makes the RBF boundary more local and flexible. Aggregated out-of-fold predictions gave 260 true negatives, 42 false positives, 82 false negatives, and 78 true positives; sensitivity for class 1 was 48.8%, so many positive cases were missed. If missing CHD cases is costly, compare models using sensitivity, specificity, ROC-AUC, and/or a cost-sensitive threshold rather than accuracy alone. These out-of-fold figures are descriptive; final performance should ideally be assessed with an independent test set or nested CV.</p>
+</section>
+<h2 id="skill-md">Appendix: SKILL.md</h2>
+<p>The following is the complete contents of the handwritten <code>SKILL.md</code> file, included in this HTML submission.</p>
+<pre class="skill-source" style="white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f9fc;border:1px solid #d8dee8;border-radius:6px;padding:18px;font:13px/1.5 Consolas,Monaco,monospace;">---
+name: svm-analysis
+description: Workflow for deciding whether and how to fit a support vector machine, tuning it, selecting a final model, and reporting it on one page.
+disable-model-invocation: true
+---
+
+# SVM Analysis
+
+Use this workflow to decide whether and how to fit an SVM, then report a defensible final model. Work from the data in hand; do not assume an outcome.
+
+## 1. Judge suitability
+- Confirm the response type (categorical for classification, numeric for SVR); note class balance and sample size.
+- Check predictors: numeric or encodable, missing values handled, scale differences (SVMs need centering and scaling), outliers, collinearity.
+- Weigh dimensionality against n, and computational cost (kernel SVMs scale poorly in n).
+- State plainly if SVM is a poor fit (very large n, mostly categorical predictors, need for inference) and name a simpler baseline.
+
+## 2. Choose kernels
+- Always include linear as the baseline and interpretable option.
+- Add radial (RBF) as the flexible default for smooth nonlinear boundaries.
+- Add polynomial or sigmoid only with a stated reason (e.g., known interaction structure).
+- Justify each kernel from data features: apparent separability, dimension, n, exploratory plots. Drop kernels you cannot justify.
+
+## 3. Tuning parameters and method
+- Cost C (all kernels); gamma (RBF, polynomial); degree and coef0 (polynomial); epsilon (SVR); class weights if imbalanced.
+- Use log-spaced grids for C and gamma; search coarse, then refine; ensure the optimum is not on a grid edge.
+- Tune on training data only, using the same resampling as in step 4; standardize inside each fold.
+- Set and record a random seed.
+
+## 4. Evaluation for model selection
+- Use repeated (stratified, for classes) k-fold CV to compare kernels and tuning values; use nested CV or a held-out test set for the final estimate.
+- Match the metric to the goal: accuracy, balanced accuracy, AUC, or F1 for classes; RMSE or MAE for regression.
+- When scores tie, choose the simplest model within one standard error of the best.
+- Use the test set once, after the model is fixed.
+
+## 5. Required figure and table
+- One compact figure: CV performance versus tuning parameters, one line or panel per kernel, with error bars or bands and the optimum marked.
+- One compact table: per kernel, best tuning values, CV metric with SE, number of support vectors, and test result if available.
+- Keep labels readable; no decoration.
+
+## 6. Interpret and report
+- Report the chosen kernel, tuned values, CV and test metrics with uncertainty, and the comparison with the baseline.
+- Report the support vector count or fraction and what it implies about complexity and margin tightness.
+- Explain C and gamma in plain terms (regularization strength, boundary flexibility); flag over- or underfitting via the train-versus-CV gap.
+- Note limitations: imbalance, scaling choices, tuning instability, no inferential output.
+
+## 7. Length and prioritization
+- The write-up must fit one printed page at 11-point font, including the figure and table.
+- Priority order: (a) figure and table, (b) final model and key numbers, (c) rationale for kernel and tuning choices, (d) suitability checks and limitations.
+- Cut anything that does not help justify the final model; use one-sentence bullets.
+</pre>
+</main>
+</body>
+</html>
