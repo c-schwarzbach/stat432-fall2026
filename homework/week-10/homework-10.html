@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STAT 432 — Homework 10</title>
+<style>
+:root{--ink:#182230;--muted:#536273;--line:#d8e0e8;--accent:#245b83;--paper:#fff;--bg:#f3f6f9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.62 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:980px;margin:36px auto;padding:48px 58px;background:var(--paper);box-shadow:0 8px 32px #1b2a3a12}
+h1{font-size:2.15rem;line-height:1.2;margin:0 0 8px}h2{font-size:1.55rem;margin-top:2.3em;border-bottom:2px solid var(--line);padding-bottom:8px}h3{font-size:1.12rem;margin-top:1.8em;color:var(--accent)}
+p,li{color:#263445}.sub{color:var(--muted);margin-top:0}.notice{border-left:4px solid #c18a28;background:#fff8e9;padding:14px 18px;margin:24px 0}.good{border-left:4px solid #347b61;background:#eef8f3;padding:14px 18px;margin:18px 0}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101c2b;color:#e8eff7;padding:18px;border-radius:8px;font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-x:auto}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#edf1f5;padding:2px 5px;border-radius:4px}
+pre code{background:none;padding:0}.small{font-size:.9rem;color:var(--muted)}.placeholder{border:1px dashed #9aaaba;padding:15px;border-radius:7px;color:var(--muted);background:#fafcfe}
+a{color:var(--accent)}table{border-collapse:collapse;width:100%;margin:16px 0}td,th{border:1px solid var(--line);padding:8px;text-align:left}th{background:#f2f5f8}
+@media print{body{background:white}main{box-shadow:none;margin:0;padding:20px;max-width:none}pre{white-space:pre-wrap}}
+</style>
+</head>
+<body><main>
+<h1>Homework 10</h1>
+<p class="sub">STAT 432 · Random forests · Reproducible solution and analysis template</p>
+
+<h2>Setup</h2>
+<p>Unzip the supplied homework archive. Keep <code>mnist-first2000.csv.gz</code> in the working directory (or update the path below). Install the RLT package once, then run the code chunks in order. The seed is fixed at <strong>43210</strong>.</p>
+<pre><code>install.packages("RLT")  # run once
+library(RLT)
+set.seed(43210)</code></pre>
+
+<h2>Question 1 — Bias–variance trade-off simulation</h2>
+<h3>1(a). Simulation design and figures</h3>
+<p>The test predictors are generated once from a five-dimensional multivariate normal distribution with unit marginal variances and pairwise correlation 0.3. They remain fixed across all 100 repetitions. Each repetition generates a fresh training sample of 200 observations. Within a repetition, all tuning settings use the same training sample, so differences between settings are not confounded by different training data. The response is the specified signal plus independent standard normal noise.</p>
+<p>For a test point \(x_i\), the estimates are \(\widehat{Bias}^2_i=(\overline{\hat f}_i-f(x_i))^2\) and \(\widehat{Var}_i=R^{-1}\sum_r(\hat f_{ir}-\overline{\hat f}_i)^2\). The plotted quantities average these pointwise estimates over the 200 fixed test points.</p>
+<pre><code>library(RLT)
+set.seed(43210)
+
+R &lt;- 100
+n.train &lt;- 200
+n.test &lt;- 200
+p &lt;- 5
+rho &lt;- 0.3
+Sigma &lt;- matrix(rho, p, p)
+diag(Sigma) &lt;- 1
+
+# Generate the fixed test set once.
+Z.test &lt;- matrix(rnorm(n.test * p), n.test, p)
+X.test &lt;- Z.test %*% chol(Sigma)
+f.test &lt;- X.test[, 1] + X.test[, 3] + X.test[, 5]
+
+node.values &lt;- c(1, 5, 10, 20, 30)
+mtry.values &lt;- 1:5
+
+# Array dimensions: test point x repetition x setting.
+pred.node &lt;- array(NA_real_, c(n.test, R, length(node.values)))
+pred.mtry &lt;- array(NA_real_, c(n.test, R, length(mtry.values)))
+
+for (r in seq_len(R)) {
+  Z &lt;- matrix(rnorm(n.train * p), n.train, p)
+  X &lt;- Z %*% chol(Sigma)
+  y &lt;- X[, 1] + X[, 3] + X[, 5] + rnorm(n.train)
+
+  # Same training data for every node-size and mtry setting.
+  for (j in seq_along(node.values)) {
+    fit &lt;- RLT(
+      x = X, y = y, model = "regression",
+      ntrees = 500, mtry = 3, nmin = node.values[j],
+      resample.prob = 1, replacement = TRUE,
+      reinforcement = FALSE, importance = FALSE,
+      use.cores = 1
+    )
+    pred.node[, r, j] &lt;- predict(fit, X.test)$Prediction
+  }
+
+  for (j in seq_along(mtry.values)) {
+    fit &lt;- RLT(
+      x = X, y = y, model = "regression",
+      ntrees = 500, mtry = mtry.values[j], nmin = 10,
+      resample.prob = 1, replacement = TRUE,
+      reinforcement = FALSE, importance = FALSE,
+      use.cores = 1
+    )
+    pred.mtry[, r, j] &lt;- predict(fit, X.test)$Prediction
+  }
+}
+
+summarize_pred &lt;- function(pred, truth, tuning) {
+  b &lt;- v &lt;- numeric(dim(pred)[3])
+  for (j in seq_len(dim(pred)[3])) {
+    point_means &lt;- rowMeans(pred[, , j])
+    b[j] &lt;- mean((point_means - truth)^2)
+    v[j] &lt;- mean(apply(pred[, , j], 1, function(z) mean((z - mean(z))^2)))
+  }
+  data.frame(setting = tuning, squared_bias = b, variance = v)
+}
+
+node.results &lt;- summarize_pred(pred.node, f.test, node.values)
+mtry.results &lt;- summarize_pred(pred.mtry, f.test, mtry.values)
+
+# Two separate figures, as requested.
+plot_bias_variance &lt;- function(d, xlab, main) {
+  matplot(d$setting, cbind(d$squared_bias, d$variance),
+          type = "b", pch = c(16, 17), lty = 1,
+          xlab = xlab, ylab = "Average over 200 test points",
+          main = main, col = c("#24618a", "#c16b32"))
+  legend("topright", c("Squared bias", "Variance"),
+         col = c("#24618a", "#c16b32"), pch = c(16, 17), lty = 1)
+}
+par(mfrow = c(1, 1))
+plot_bias_variance(node.results, "Node size (nmin)", "Bias–variance vs. node size")
+plot_bias_variance(mtry.results, "mtry", "Bias–variance vs. mtry")
+
+print(node.results)
+print(mtry.results)</code></pre>
+
+<h3>1(b). Interpretation</h3>
+<p><strong>Large node size.</strong> A larger minimum node size restricts how finely each tree can partition the predictor space. In this example, a node size of 30 is relatively large compared with the training sample of 200. The resulting trees are shallower and smoother. This can reduce variance because individual trees are less sensitive to the particular training sample, but it can increase bias because the trees cannot represent the additive regression surface as flexibly. The simulation curves should be used to determine how pronounced this effect is for this sample size and signal.</p>
+<p><strong>Large <code>mtry</code>.</strong> A larger <code>mtry</code> gives each split more candidate predictors. This makes it more likely that useful variables (\(X_1,X_3,X_5\)) are available, which can improve split quality and reduce bias. However, trees may become more similar because they repeatedly have access to the same strong predictors. Greater similarity reduces the variance-reduction benefit of averaging many trees. A smaller <code>mtry</code> increases tree diversity, but may often leave a useful predictor out of the candidate set and weaken individual splits. The best choice balances split strength and diversity.</p>
+<p><strong>Sampling 100 rather than 200 observations per tree.</strong> I would expect the preferred node size to tend toward a smaller value, although this is not guaranteed. With fewer observations in each tree's bootstrap sample, a fixed node-size threshold of 10 or 20 is a larger fraction of the available data and can force trees to be too shallow. Reducing the threshold allows each tree to grow more deeply and may recover some flexibility. The smaller samples also make individual trees noisier, so the extra flexibility can increase variance; the preferred value should therefore be checked empirically rather than assumed.</p>
+
+<h2>Question 2 — Tuning random forests for MNIST</h2>
+<h3>2(a). Prepare data, PCA, and default forest</h3>
+<p>The first 1,000 rows are used only to construct the training subset, and the second 1,000 rows only to construct the test subset. PCA is estimated from training pixels only, with centering and no scaling. Test scores use the training center and loading matrix, preventing information leakage from the test observations.</p>
+<pre><code>library(RLT)
+set.seed(43210)
+
+mnist &lt;- read.csv(gzfile("mnist-first2000.csv.gz"))
+stopifnot(nrow(mnist) == 2000, ncol(mnist) == 785)
+
+train.raw &lt;- mnist[1:1000, ]
+test.raw  &lt;- mnist[1001:2000, ]
+keep.digits &lt;- c(1, 6, 7)
+
+train.raw &lt;- train.raw[train.raw$Digit %in% keep.digits, ]
+test.raw  &lt;- test.raw[test.raw$Digit %in% keep.digits, ]
+
+pixel.names &lt;- setdiff(names(mnist), "Digit")
+X.train.pixel &lt;- as.matrix(train.raw[, pixel.names])
+X.test.pixel  &lt;- as.matrix(test.raw[, pixel.names])
+y.train &lt;- factor(train.raw$Digit, levels = keep.digits)
+y.test  &lt;- factor(test.raw$Digit, levels = keep.digits)
+
+# PCA is fit on training pixels only; scale = FALSE.
+pca &lt;- prcomp(X.train.pixel, center = TRUE, scale. = FALSE, retx = TRUE)
+X.train &lt;- pca$x[, 1:20, drop = FALSE]
+X.test &lt;- scale(X.test.pixel,
+                 center = pca$center,
+                 scale = FALSE) %*% pca$rotation[, 1:20]
+
+# Use the package's default mtry and node-size settings.
+default.fit &lt;- RLT(
+  x = X.train, y = y.train, model = "classification",
+  ntrees = 1000, resample.prob = 1, replacement = TRUE,
+  reinforcement = FALSE, importance = FALSE
+)
+
+# Inspect the fitted object's OOB error structure.
+str(default.fit$AllError)
+print(default.fit$AllError)</code></pre>
+<p class="small">Report the final OOB misclassification rate from the package's documented <code>AllError</code> output for your installed version. The exact extraction can differ across RLT versions, so inspect the structure rather than assuming a fixed matrix column.</p>
+<div class="placeholder">RESULT NEEDED: default-model OOB misclassification rate (from your R run).</div>
+
+<h3>2(b). Grid search and OOB permutation importance</h3>
+<p>The grid below covers a range of candidate split-variable counts and node sizes. Each fit uses 1,000 trees and bootstrap samples of the same size as the filtered training set. Select the pair with the smallest OOB misclassification rate. Ties should be resolved consistently (for example, choose the larger node size to favor a simpler forest).</p>
+<pre><code># Candidate values; report and justify the grid you use.
+mtry.grid &lt;- c(2, 4, 6, 8, 10, 15, 20)
+nmin.grid &lt;- c(1, 5, 10, 20, 30)
+
+# Helper for the RLT version installed in your course environment.
+# Inspect AllError once to confirm which element is the final OOB
+# classification error; update this extractor if your version stores
+# the error in a differently named component.
+get_final_oob &lt;- function(fit) {
+  z &lt;- fit$AllError
+  if (is.null(z)) stop("AllError is missing; check RLT importance/OOB settings.")
+  if (is.numeric(z) &amp;&amp; is.null(dim(z))) return(tail(z, 1))
+  if (is.matrix(z) || is.data.frame(z)) {
+    numeric.cols &lt;- which(vapply(as.data.frame(z), is.numeric, logical(1)))
+    if (!length(numeric.cols)) stop("No numeric OOB-error column found.")
+    return(as.numeric(z[nrow(z), numeric.cols[1]]))
+  }
+  stop("Unrecognized AllError structure; inspect str(fit$AllError).")
+}
+
+grid &lt;- expand.grid(mtry = mtry.grid, nmin = nmin.grid)
+grid$oob.error &lt;- NA_real_
+fits &lt;- vector("list", nrow(grid))
+
+for (i in seq_len(nrow(grid))) {
+  fits[[i]] &lt;- RLT(
+    x = X.train, y = y.train, model = "classification",
+    ntrees = 1000, mtry = grid$mtry[i], nmin = grid$nmin[i],
+    resample.prob = 1, replacement = TRUE,
+    reinforcement = FALSE, importance = FALSE
+  )
+  grid$oob.error[i] &lt;- get_final_oob(fits[[i]])
+}
+
+grid &lt;- grid[order(grid$oob.error, -grid$nmin), ]
+print(grid)
+
+best &lt;- grid[1, ]
+cat("Selected mtry:", best$mtry, "\n")
+cat("Selected node size:", best$nmin, "\n")
+cat("Selected OOB error:", best$oob.error, "\n")
+
+# Refit selected setting with OOB permutation importance enabled.
+importance.fit &lt;- RLT(
+  x = X.train, y = y.train, model = "classification",
+  ntrees = 1000, mtry = best$mtry, nmin = best$nmin,
+  resample.prob = 1, replacement = TRUE,
+  reinforcement = FALSE, importance = "permute"
+)
+cat("OOB error of the refit used below:", get_final_oob(importance.fit), "\n")
+print(importance.fit$VarImp)
+barplot(as.vector(importance.fit$VarImp),
+        names.arg = paste0("PC", 1:20), las = 2,
+        ylab = "OOB permutation importance",
+        main = "Permutation importance of the first 20 PCs")</code></pre>
+<div class="placeholder">RESULT NEEDED: grid table, selected (mtry, node size), and the permutation-importance plot (from your R run).</div>
+<p><strong>How to comment on importance:</strong> Identify which principal components have the largest permutation importance and whether importance is concentrated in a few components or spread across many. A larger value means that permuting that component harms OOB classification more. Principal components are linear combinations of the original pixels, so “PC1 is important” does not mean one particular pixel is important. Also note that neighboring PCs can share or distribute predictive information.</p>
+
+<h3>2(c). Final test assessment</h3>
+<p>Only after tuning is complete should the held-out test labels be used. The test set is not used to choose <code>mtry</code>, node size, the PCA transformation, or any other model setting.</p>
+<pre><code># Predict the held-out test set with the selected model.
+test.pred.object &lt;- predict(importance.fit, X.test)
+test.pred &lt;- factor(test.pred.object$Prediction, levels = levels(y.test))
+
+test.error &lt;- mean(test.pred != y.test)
+confusion &lt;- table(Actual = y.test, Predicted = test.pred)
+cat("Test misclassification rate:", test.error, "\n")
+print(confusion)</code></pre>
+<div class="placeholder">RESULT NEEDED: test misclassification rate.</div>
+<div class="placeholder">RESULT NEEDED: 3 × 3 test confusion matrix.</div>
+
+<h2>Question 3 — Planning a random-forest analysis skill</h2>
+<h3>3(a). Paragraph</h3>
+<p>I would write the skill as a concise, reusable workflow that establishes the essential standards of a sound random-forest analysis while leaving data-dependent choices to the AI. The skill should require the AI to inspect the data, identify the response and predictors, check missingness and class balance, separate training and assessment data appropriately, fit a random forest, tune important hyperparameters using a clearly defined validation or out-of-bag criterion, and evaluate the final model on data not used for tuning. These steps protect the validity and reproducibility of the analysis and should not be left to guesswork. However, I would not prescribe one fixed tuning grid, one set of plots, or one interpretation for every dataset. A capable AI can adapt those choices to the sample size, number and type of predictors, response type, and computational limits. I would use the skill to specify my preferences—such as a reproducible seed, readable tables, clearly labeled figures, concise explanations, and explicit discussion of limitations—while asking the AI to explain any dataset-specific decisions. For a less capable AI, I would add more detailed step-by-step guidance and examples; for a capable AI, I would keep standard statistical instructions brief and focus the skill on requirements that are easy to overlook or that reflect my preferred reporting style.</p>
+
+<h3>3(b). Ten instructions, from basic to personal preferences</h3>
+<ol>
+<li>Identify the response variable and predictor variables, and determine whether the task is classification or regression.</li>
+<li>Inspect the dataset dimensions, variable types, missing values, outcome distribution, and any potential data-quality problems before fitting a model.</li>
+<li>Separate training data from validation or test data before model development; do not use the final test labels to tune the model.</li>
+<li>Fit an appropriate random-forest model and state the software, package, key settings, and random seed used.</li>
+<li>Tune relevant hyperparameters, including the number of candidate predictors per split and the minimum terminal-node size, using a clearly stated validation or OOB criterion.</li>
+<li>Compare the tuned model with a reasonable baseline and report an appropriate performance measure, such as misclassification rate for classification or RMSE for regression.</li>
+<li>Include a clearly labeled table of tuning results and identify the selected model and the criterion used to select it.</li>
+<li>Include useful figures, such as tuning-performance plots and variable-importance plots, with readable labels, units, and captions.</li>
+<li>Interpret the results in plain language, distinguish association or predictive importance from causation, and discuss uncertainty, limitations, and possible overfitting.</li>
+<li>Use a clean, consistent report style: state the main findings first, round numerical results consistently, avoid unnecessary technical detail, and make all code and analysis steps reproducible.</li>
+</ol>
+
+</body></html>
